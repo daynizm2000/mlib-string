@@ -27,25 +27,6 @@ The project is written in ISO C and depends only on the standard C library.
 
 ---
 
-## Project Structure
-
-```
-.
-├── string
-│   ├── include
-│   │   └── string.h
-│   └── src
-│       └── string.c
-├── example
-│   ├── example.c
-│   ├── makefile
-│   └── test.sh
-├── makefile
-└── test.sh
-```
-
----
-
 ## Requirements
 
 - GCC
