@@ -1,4 +1,4 @@
-# mlib_string
+# MLib String
 
 `mlib_string` is a lightweight dynamic string library written in C.
 
