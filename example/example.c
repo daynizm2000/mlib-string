@@ -1,3 +1,6 @@
+// A simple example demonstrating the basic usage of MLib String
+
+
 #include "../string/include/string.h"
 #include <stdio.h>
 
