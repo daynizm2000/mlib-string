@@ -22,7 +22,8 @@
 
 
 #define mlib_str_for_each_index_reverse(obj, idx) \
-        for ((idx) = (obj)->len; (obj)->data && (obj)->len && (idx)-- > 0; )
+        for ((idx) = (obj)->len; (obj)->data && (obj)->len && (idx) > 0; ) \
+		if (--(idx), 1)
 
 
 
