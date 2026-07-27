@@ -2,7 +2,8 @@
 
 `mlib_string` is a lightweight dynamic string library written in C.
 
-The library provides a simple string object with automatic memory management and a convenient API for common string operations such as concatenation, formatting, searching, replacing, insertion, and deletion.
+The library provides a simple string object with automatic memory management and a convenient API for common string operations such as concatenation, formatting, searching, replacing, insertion, and deletion.  
+Additionally, it offers a **string literal** type – a non‑owning, zero‑allocation view of a compile‑time or constant string.
 
 The project is written in ISO C and depends only on the standard C library.
 
@@ -11,6 +12,7 @@ The project is written in ISO C and depends only on the standard C library.
 ## Features
 
 - Dynamic string type
+- Lightweight string literal type for zero‑allocation string views
 - Automatic memory management
 - Copy and move operations
 - String formatting (`printf`-style)
@@ -18,7 +20,7 @@ The project is written in ISO C and depends only on the standard C library.
 - Insert and erase operations
 - Replace substrings
 - Search and reverse search
-- Case-sensitive and case-insensitive comparison
+- Case‑sensitive and case‑insensitive comparison
 - Character push/pop
 - Prefix and suffix checks
 - Uppercase and lowercase conversion
@@ -83,19 +85,21 @@ gcc main.c string/src/string.c
 
 int main(void)
 {
-    mlib_str_t str;
+    mlib_str_t strobj;
+    mlib_str_literal_t litobj;
 
-    mlib_str_init(&str, "test");
+    mlib_str_init(&strobj, "test");
+    mlib_str_literal_set(&litobj, "literal data");
 
-    mlib_str_cat(&str, " test");
+    mlib_str_cat(&strobj, " test");
+    mlib_str_replace(&strobj, "test", "test...");
+    mlib_str_replace(&strobj, " ", ",");
 
-    mlib_str_replace(&str, "test", "test...");
+    printf("%s\n", mlib_str_data(&strobj));
+    printf("%s, len: %zu\n", mlib_str_literal_data(&litobj),
+           mlib_str_literal_len(&litobj));
 
-    mlib_str_replace(&str, " ", ",");
-
-    printf("%s\n", mlib_str_data(&str));
-
-    mlib_str_destroy(&str);
+    mlib_str_destroy(&strobj);
 
     return 0;
 }
@@ -105,6 +109,7 @@ Output:
 
 ```
 test...,test...
+literal data, len: 12
 ```
 
 ---
@@ -119,7 +124,29 @@ mlib_str_destroy()
 mlib_str_clear()
 ```
 
-Creates, destroys, and clears string objects.
+Creates, destroys, and clears dynamic string objects.
+
+---
+
+### String Literal
+
+`mlib_str_literal_t` represents a read‑only view of a constant string. It does **not** own the underlying memory and requires no allocation or destruction.
+
+**Macros**
+
+- `mlib_str_literal_set(obj, literal)` – assigns a string literal to a literal object.
+- `mlib_str_literal_data(obj)` – returns the `const char*` data pointer.
+- `mlib_str_literal_len(obj)` – returns the length of the literal string.
+- `mlib_str_literal_clear(obj)` – resets the literal object to a NULL/empty state.
+
+Example:
+
+```c
+mlib_str_literal_t lit;
+mlib_str_literal_set(&lit, "hello");
+printf("%s, %zu\n", mlib_str_literal_data(&lit), mlib_str_literal_len(&lit));
+mlib_str_literal_clear(&lit);
+```
 
 ---
 
@@ -268,6 +295,7 @@ mlib_str_for_each_index_reverse()
 
 ## Notes
 
-- All strings are null-terminated.
-- The library manages memory internally.
-- Call `mlib_str_destroy()` when a string is no longer needed.
+- All dynamic strings are null‑terminated.
+- The library manages memory internally – call `mlib_str_destroy()` when a dynamic string is no longer needed.
+- String literals (`mlib_str_literal_t`) are non‑owning views; they do not need to be destroyed and do not allocate memory.
+- Include `"string.h"` to get both dynamic strings and the literal type.
