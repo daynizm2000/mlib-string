@@ -11,9 +11,9 @@ The project is written in ISO C and depends only on the standard C library.
 
 ## Features
 
-- Dynamic string type
+- Dynamic string type with custom memory allocator support
 - Lightweight string literal type for zero‑allocation string views
-- Automatic memory management
+- Pluggable memory management (malloc/free or custom allocators)
 - Copy and move operations
 - String formatting (`printf`-style)
 - Concatenation
@@ -88,7 +88,8 @@ int main(void)
     mlib_str_t strobj;
     mlib_str_literal_t litobj;
 
-    mlib_str_init(&strobj, "test");
+    /* Pass NULL as the third argument to use default malloc/free */
+    mlib_str_init(&strobj, "test", NULL);
     mlib_str_literal_set(&litobj, "literal data");
 
     mlib_str_cat(&strobj, " test");
@@ -114,17 +115,66 @@ literal data, len: 12
 
 ---
 
+## Custom Memory Allocators
+
+The library allows you to supply your own memory management functions through the `mlib_str_attr_t` structure.  
+This is useful for working with custom heaps, memory pools, or tracking allocations.
+
+### mlib_str_attr_t
+
+```c
+typedef struct {
+    struct {
+        void *(*alloc)(size_t size, void *arg);
+        void *(*realloc)(void *addr, size_t newsize, void *arg);
+        void (*free)(void *addr, void *arg);
+    } mem_ops;
+
+    void *private_data;
+} mlib_str_attr_t;
+```
+
+- `mem_ops.alloc`   – allocation function (signature like `malloc`, but receives `private_data`)
+- `mem_ops.realloc` – reallocation function (signature like `realloc`, receives `private_data`)
+- `mem_ops.free`    – deallocation function (signature like `free`, receives `private_data`)
+- `private_data`    – user‑defined pointer passed to all memory operations
+
+If any function pointer is `NULL`, the library falls back to the standard `malloc`/`realloc`/`free`.
+
+### Passing attributes to `mlib_str_init`
+
+```c
+mlib_str_t s;
+mlib_str_attr_t attr;
+
+attr.mem_ops.alloc   = my_alloc;
+attr.mem_ops.realloc = my_realloc;
+attr.mem_ops.free    = my_free;
+attr.private_data    = my_context;
+
+mlib_str_init(&s, "data", &attr);
+```
+
+Pass `NULL` as the third argument to `mlib_str_init` to use default allocators (and `private_data = NULL`).
+
+The attribute is stored inside the string object and used for all subsequent memory operations. `mlib_str_copy` preserves the source’s attributes, `mlib_str_swap` exchanges them, and `mlib_str_destroy` resets the attribute structure.
+
+Use the macro `mlib_str_prv_data(obj)` to retrieve the `private_data` pointer for external use.
+
+---
+
 ## API Overview
 
 ### Initialization
 
 ```c
-mlib_str_init()
+mlib_str_init(mlib_str_t *obj, const char *data, const mlib_str_attr_t *attr)
 mlib_str_destroy()
 mlib_str_clear()
 ```
 
-Creates, destroys, and clears dynamic string objects.
+Creates, destroys, and clears dynamic string objects.  
+`mlib_str_init` takes an optional `attr` pointer; if `NULL`, standard library allocators are used.
 
 ---
 
@@ -172,7 +222,8 @@ mlib_str_move()
 mlib_str_swap()
 ```
 
-Assigns, copies, formats, or exchanges string contents.
+Assigns, copies, formats, or exchanges string contents.  
+`mlib_str_copy` also copies the source object’s memory attributes.
 
 ---
 
@@ -299,3 +350,6 @@ mlib_str_for_each_index_reverse()
 - The library manages memory internally – call `mlib_str_destroy()` when a dynamic string is no longer needed.
 - String literals (`mlib_str_literal_t`) are non‑owning views; they do not need to be destroyed and do not allocate memory.
 - Include `"string.h"` to get both dynamic strings and the literal type.
+- By default, the library uses the standard `malloc`, `realloc`, and `free`.  
+  Use `mlib_str_attr_t` to provide custom allocators for specialised environments.
+```

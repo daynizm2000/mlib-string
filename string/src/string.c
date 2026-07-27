@@ -55,7 +55,25 @@ static char *mlib_str_util_strrstr(const char *haystack, const char *needle)
 
 
 
-int mlib_str_init(mlib_str_t *obj, const char *data)
+static inline void *mlib_str_default_alloc(size_t size, void *arg)
+{
+        return malloc(size);
+}
+
+
+static inline void *mlib_str_default_realloc(void *addr, size_t newsize, void *arg)
+{
+        return realloc(addr, newsize);
+}
+
+
+static inline void mlib_str_default_free(void *addr, void *arg)
+{
+        free(addr);
+}
+
+
+int mlib_str_init(mlib_str_t *obj, const char *data, const mlib_str_attr_t *attr)
 {
         if (!obj)
                 return -1;
@@ -71,11 +89,32 @@ int mlib_str_init(mlib_str_t *obj, const char *data)
         }
 
 
+        if (!attr) {
+                obj->attr.mem_ops.alloc = mlib_str_default_alloc;
+                obj->attr.mem_ops.realloc = mlib_str_default_realloc;
+                obj->attr.mem_ops.free = mlib_str_default_free;
+                obj->attr.private_data = NULL;
+        }
+        else {
+                obj->attr = *attr;
+
+
+                if (!attr->mem_ops.alloc)
+                        obj->attr.mem_ops.alloc = mlib_str_default_alloc;
+                
+                if (!attr->mem_ops.realloc)
+                        obj->attr.mem_ops.realloc = mlib_str_default_realloc;
+
+                if (!attr->mem_ops.free)
+                        obj->attr.mem_ops.free = mlib_str_default_free;
+        }
+
+
         obj->capacity = strlen(data) + 1;
         obj->len = obj->capacity - 1;
 
 
-        obj->data = malloc(obj->capacity);
+        obj->data = obj->attr.mem_ops.alloc(obj->capacity, obj->attr.private_data);
 
         if (!obj->data)
                 return -1;
@@ -97,7 +136,7 @@ int mlib_str_reserve(mlib_str_t *obj, size_t newcap)
                 return -1;
 
 
-        tmp = realloc(obj->data, newcap);
+        tmp = obj->attr.mem_ops.realloc(obj->data, newcap, obj->attr.private_data);
 
         if (!tmp)
                 return -1;
@@ -183,6 +222,7 @@ void mlib_str_swap(mlib_str_t *obj1, mlib_str_t *obj2)
         mlib_str_util_val_swap(obj1->data, obj2->data);
         mlib_str_util_val_swap(obj1->len, obj2->len);
         mlib_str_util_val_swap(obj1->capacity, obj2->capacity);
+        mlib_str_util_val_swap(obj1->attr, obj2->attr);
 }
 
 
@@ -198,7 +238,7 @@ int mlib_str_copy(mlib_str_t *dst, const mlib_str_t *src)
         mlib_str_destroy(dst);
 
 
-        return mlib_str_init(dst, src->data);
+        return mlib_str_init(dst, src->data, &src->attr);
 }
 
 
@@ -240,7 +280,7 @@ int mlib_str_set(mlib_str_t *obj, const char *data)
                 obj->len = len;
 
 
-                obj->data = malloc(obj->capacity);
+                obj->data = obj->attr.mem_ops.alloc(obj->capacity, obj->attr.private_data);
 
                 if (!obj->data)
                         return -1;
@@ -289,7 +329,7 @@ int mlib_str_set_fmt(mlib_str_t *obj, const char *fmt, ...)
                 obj->capacity = len + 1;
 
 
-                obj->data = malloc(obj->capacity);
+                obj->data = obj->attr.mem_ops.alloc(obj->capacity, obj->attr.private_data);
                 
                 if (!obj->data)
                         return -1;
@@ -336,7 +376,7 @@ int mlib_str_cat(mlib_str_t *obj, const char *data)
                 obj->len = len;
 
 
-                obj->data = malloc(obj->capacity);
+                obj->data = obj->attr.mem_ops.alloc(obj->capacity, obj->attr.private_data);
 
                 if (!obj->data)
                         return -1;
@@ -354,7 +394,7 @@ int mlib_str_cat(mlib_str_t *obj, const char *data)
                         return -1;
 
 
-        memcpy(obj->data + obj->len, data, len + 1); // + 1 for \0
+        memcpy(obj->data + obj->len, data, len + 1);
         obj->len += len;
 
 
@@ -390,7 +430,7 @@ int mlib_str_cat_fmt(mlib_str_t *obj, const char *fmt, ...)
                 obj->len = len;
 
 
-                obj->data = malloc(obj->capacity);
+                obj->data = obj->attr.mem_ops.alloc(obj->capacity, obj->attr.private_data);
                 
                 if (!obj->data)
                         return -1;
@@ -509,7 +549,7 @@ int mlib_str_push(mlib_str_t *obj, char val)
 
 
         if (!obj->data) {
-                obj->data = malloc(MLIB_STR_DEFCAP);
+                obj->data = obj->attr.mem_ops.alloc(MLIB_STR_DEFCAP, obj->attr.private_data);
 
                 if (!obj->data)
                         return -1;
@@ -837,4 +877,5 @@ void mlib_str_destroy(mlib_str_t *obj)
 
         obj->len = 0;
         obj->capacity = 0;
+        memset(&obj->attr, 0, sizeof(mlib_str_attr_t));
 }

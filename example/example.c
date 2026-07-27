@@ -11,7 +11,7 @@ int main(void)
         mlib_str_literal_t litobj;
 
 
-        mlib_str_init(&strobj, "test");
+        mlib_str_init(&strobj, "test", NULL);
         mlib_str_literal_set(&litobj, "literal data");
 
 

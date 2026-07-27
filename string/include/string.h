@@ -10,28 +10,46 @@
 
 
 
+
 #define mlib_str_for_each(obj, p) \
-        for ((p) = (obj)->data; (obj)->data && (obj)->len && (p) < ((obj)->data + (obj)->len); (p)++)
+        for ((p) = (obj)->data; (p) < ((obj)->data + (obj)->len); (p)++)
 
 
 #define mlib_str_for_each_index(obj, idx) \
-        for ((idx) = 0; (obj)->data && (obj)->len && (idx) < (obj)->len; (idx)++)
+        for ((idx) = 0; (idx) < (obj)->len; (idx)++)
 
 
 #define mlib_str_for_each_reverse(obj, p) \
-        for ((p) = (obj)->data + (obj)->len - 1; (obj)->len && (p) >= (obj)->data; (p)--)
+        for ((p) = (obj)->data + (obj)->len - 1; (p) >= (obj)->data; (p)--)
 
 
-#define mlib_str_for_each_index_reverse(obj, idx) \
-        for ((idx) = (obj)->len; (obj)->data && (obj)->len && (idx) > 0; ) \
+#define mlib_str_for_each_index_reverse(obj, idx)       \
+        for ((idx) = (obj)->len; (idx) > 0; )           \
 			if (--(idx), 1)
 
+
+
+#define mlib_str_prv_data(obj) ((obj)->attr.private_data)
+
+
+
+typedef struct {
+        struct {
+                void *(*alloc)(size_t size, void *arg);
+                void *(*realloc)(void *addr, size_t newsize, void *arg);
+                void (*free)(void *addr, void *arg);
+        } mem_ops;
+
+        void *private_data;
+} mlib_str_attr_t;
 
 
 typedef struct {
         char *data;
         size_t len;
         size_t capacity;
+
+        mlib_str_attr_t attr;
 } mlib_str_t;
 
 
@@ -106,35 +124,41 @@ static inline bool mlib_str_empty(mlib_str_t *obj)
                 return true;
 
 
-        return (!obj->len) ? true : false;
+        return obj->len == 0;
 }
 
 
-static inline void mlib_str_toupper(const mlib_str_t *obj)
+static inline void mlib_str_toupper(mlib_str_t *obj)
 {
+        char *p;
+
+
         if (!obj)
                 return;
 
 
-        for (char *p = obj->data; *p; p++)
+        mlib_str_for_each(obj, p)
                 *p = toupper((unsigned char)*p);
 }
 
 
 static inline void mlib_str_tolower(mlib_str_t *obj)
 {
+        char *p;
+
+
         if (!obj)
                 return;
 
 
-        for (char *p = obj->data; *p; p++)
+        mlib_str_for_each(obj, p)
                 *p = tolower((unsigned char)*p);
 }
 
 
 
 
-int mlib_str_init(mlib_str_t *obj, const char *data);
+int mlib_str_init(mlib_str_t *obj, const char *data, const mlib_str_attr_t *attr);
 
 
 int mlib_str_reserve(mlib_str_t *obj, size_t newcap);
