@@ -3,7 +3,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdint.h>
-#include "../include/string.h"
+#include "../include/mlib/string.h"
 
 
 #define MLIB_STR_DEFCAP 64
@@ -80,7 +80,7 @@ int mlib_str_init(mlib_str_t *obj, const char *data, const mlib_str_attr_t *attr
 
 
         if (!data) {
-                obj->data = NULL;
+                obj->data = "";
                 obj->len = 0;
                 obj->capacity = 0;
 
@@ -275,7 +275,7 @@ int mlib_str_set(mlib_str_t *obj, const char *data)
                 return -1;
 
 
-        if (!obj->data) {
+        if (!obj->data || !obj->capacity) {
                 obj->capacity = len + 1;
                 obj->len = len;
 
@@ -325,7 +325,7 @@ int mlib_str_set_fmt(mlib_str_t *obj, const char *fmt, ...)
         va_end(vl);
 
 
-        if (!obj->data) {
+        if (!obj->data || !obj->capacity) {
                 obj->capacity = len + 1;
 
 
@@ -371,7 +371,7 @@ int mlib_str_cat(mlib_str_t *obj, const char *data)
                 return -1;
 
 
-        if (!obj->data) {
+        if (!obj->data || !obj->capacity) {
                 obj->capacity = len + 1;
                 obj->len = len;
 
@@ -425,7 +425,7 @@ int mlib_str_cat_fmt(mlib_str_t *obj, const char *fmt, ...)
                 return -1;
 
 
-        if (!obj->data) {
+        if (!obj->data || !obj->capacity) {
                 obj->capacity = len + 1;
                 obj->len = len;
 
@@ -478,13 +478,13 @@ int mlib_str_cmp(const mlib_str_t *obj1, const mlib_str_t *obj2)
                 return 0;
 
 
-        if (!obj1->data && !obj2->data)
+        if ((!obj1->data || !obj1->capacity) && (!obj2->data || !obj2->capacity))
                 return 0;
 
-        if (!obj1->data && obj2->data)
+        if ((!obj1->data || !obj1->capacity) && (obj2->data || obj2->capacity))
                 return -1;
 
-        if (obj1->data && !obj2->data)
+        if ((obj1->data || obj1->capacity) && (!obj2->data || !obj2->capacity))
                 return 1;
 
 
@@ -515,13 +515,13 @@ int mlib_str_case_cmp(const mlib_str_t *obj1, const mlib_str_t *obj2)
                 return 0;
 
 
-        if (!obj1->data && !obj2->data)
+        if ((!obj1->data || !obj1->capacity) && (!obj2->data || !obj2->capacity))
                 return 0;
 
-        if (!obj1->data && obj2->data)
+        if ((!obj1->data || !obj1->capacity) && (obj2->data || obj2->capacity))
                 return -1;
 
-        if (obj1->data && !obj2->data)
+        if ((obj1->data || obj1->capacity) && (!obj2->data || !obj2->capacity))
                 return 1;
 
 
@@ -548,7 +548,7 @@ int mlib_str_push(mlib_str_t *obj, char val)
                 return -1;
 
 
-        if (!obj->data) {
+        if (!obj->data || !obj->capacity) {
                 obj->data = obj->attr.mem_ops.alloc(MLIB_STR_DEFCAP, obj->attr.private_data);
 
                 if (!obj->data)
@@ -581,7 +581,7 @@ char mlib_str_pop(mlib_str_t *obj)
                 return 0;
 
 
-        if (!obj->data || !obj->len)
+        if (!obj->data || !obj->capacity || !obj->len)
                 return 0;
 
 
@@ -626,7 +626,7 @@ int mlib_str_insert(mlib_str_t *obj, size_t idx, const char *data)
                 obj->len - idx + 1);
 
 
-        strcpy(&obj->data[idx], data);
+        memmove(&obj->data[idx], data, len);
         obj->len += len;
 
 
@@ -636,7 +636,7 @@ int mlib_str_insert(mlib_str_t *obj, size_t idx, const char *data)
 
 int mlib_str_erase(mlib_str_t *obj, size_t start, size_t end)
 {
-        if (!obj || !obj->data || !obj->len)
+        if (!obj || !obj->data || !obj->capacity || !obj->len)
                 return -1;
 
 
@@ -661,7 +661,7 @@ ssize_t mlib_str_find(const mlib_str_t *obj, const char *data)
         const char *res;
 
 
-        if (!obj || !data)
+        if (!obj || !obj->data || !data)
                 return -1;
 
 
@@ -680,7 +680,7 @@ ssize_t mlib_str_rfind(const mlib_str_t *obj, const char *data)
         const char *res;
 
 
-        if (!obj || !data)
+        if (!obj || !obj->data || !data)
                 return -1;
 
 
@@ -699,7 +699,7 @@ ssize_t mlib_str_find_char(const mlib_str_t *obj, char data)
         const char *res;
 
 
-        if (!obj || !data)
+        if (!obj || !obj->data || !data)
                 return -1;
 
 
@@ -718,7 +718,7 @@ ssize_t mlib_str_rfind_char(const mlib_str_t *obj, char data)
         const char *res;
 
 
-        if (!obj || !data)
+        if (!obj || !obj->data || !data)
                 return -1;
 
 
@@ -739,7 +739,7 @@ int mlib_str_replace(mlib_str_t *obj, const char *old, const char *new)
         char *data;
 
 
-        if (!obj || !old || !new || !obj->data)
+        if (!obj || !old || !new || !obj->data || !obj->capacity)
                 return -1;
 
 
@@ -751,6 +751,10 @@ int mlib_str_replace(mlib_str_t *obj, const char *old, const char *new)
 
         olen = strlen(old);
         nlen = strlen(new);
+
+
+        if (!olen)
+                return 0;
 
 
         if (nlen > olen) {
@@ -773,7 +777,7 @@ int mlib_str_replace(mlib_str_t *obj, const char *old, const char *new)
                         return 0;
 
 
-                if ((nlen - olen) * count > obj->capacity)
+                if (obj->len + ((nlen - olen) * count) + 1 > obj->capacity)
                         if (mlib_str_reserve(obj, obj->capacity + ((nlen - olen) * count)))
                                 return -1;
         }
@@ -795,22 +799,15 @@ int mlib_str_replace(mlib_str_t *obj, const char *old, const char *new)
                         obj->len -= olen;
                 }
                 else if (nlen != olen) {
-                        size_t diff;
-
-
-                        if (nlen > olen) {
-                                diff = nlen - olen;
-                                obj->len += diff;
-                        }
-                        else {
-                                diff = olen - nlen;
-                                obj->len -= diff;
-                        }
-
-
-                        memmove(&start[olen + diff],
+                        memmove(&start[nlen],
                                 &start[olen],
                                 obj->len - (&start[olen] - obj->data) + 1);
+
+
+                        if (nlen > olen)
+                                obj->len += nlen - olen;
+                        else
+                                obj->len -= olen - nlen;
                 }
 
 
@@ -828,7 +825,7 @@ bool mlib_str_startswith(const mlib_str_t *obj, const char *prefix)
         size_t len;
 
 
-        if (!obj || !prefix)
+        if (!obj || !obj->data || !prefix)
                 return false;
 
 
@@ -848,7 +845,7 @@ bool mlib_str_endswith(const mlib_str_t *obj, const char *suffix)
         size_t len;
 
 
-        if (!obj || !suffix)
+        if (!obj || !obj->data || !suffix)
                 return false;
 
 
@@ -869,8 +866,8 @@ void mlib_str_destroy(mlib_str_t *obj)
                 return;
 
 
-        if (obj->data) {
-                free(obj->data);
+        if (obj->data && obj->capacity) {
+                obj->attr.mem_ops.free(obj->data, obj->attr.private_data);
                 obj->data = NULL;
         }
 

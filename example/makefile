@@ -1,2 +1,2 @@
 all:
-	gcc example.c ../string/src/*.c -o bin_string
+	gcc example.c ../src/*.c -o bin_string
