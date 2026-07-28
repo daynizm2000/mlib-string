@@ -10,7 +10,7 @@
 
 
 #define mlib_str_util_val_swap(a, b) do { \
-                __typeof__(a) __tmp = (a); \
+                typeof(a) __tmp = (a); \
                 (a) = (b); \
                 (b) = __tmp; \
         } while (0)
